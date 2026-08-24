@@ -70,7 +70,11 @@ export type InventoryItem = {
 export type WalletTransaction = {
   id: string;
   occurred_on: string;
-  amount: number;
+  amount_cp: number;
+  amount_sp: number;
+  amount_ep: number;
+  amount_gp: number;
+  amount_pp: number;
   description: string;
   created_at: string;
 };

@@ -172,14 +172,42 @@ create policy "allowlisted full access" on inventory_items
 -- ============================================================================
 -- Wallet ledger
 -- ============================================================================
+-- Each row is one income or expense transaction and can carry an amount in
+-- one or more coin denominations at once (e.g. +12 gp and +30 sp together).
+-- The wallet balance is never stored — it's always derived by summing every
+-- transaction's amounts, per denomination.
 
 create table if not exists wallet_transactions (
   id uuid primary key default gen_random_uuid(),
   occurred_on date not null default current_date,
-  amount numeric(10,2) not null,
+  amount_cp integer not null default 0,
+  amount_sp integer not null default 0,
+  amount_ep integer not null default 0,
+  amount_gp integer not null default 0,
+  amount_pp integer not null default 0,
   description text not null default '',
   created_at timestamptz not null default now()
 );
+
+-- Migrate pre-multi-currency installs: the old single `amount` column
+-- (implicitly gold pieces) becomes `amount_gp`, and the other four
+-- denomination columns are added alongside it.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'wallet_transactions' and column_name = 'amount'
+  ) then
+    alter table wallet_transactions rename column amount to amount_gp;
+    alter table wallet_transactions alter column amount_gp type integer using round(amount_gp)::integer;
+    alter table wallet_transactions alter column amount_gp set default 0;
+    alter table wallet_transactions alter column amount_gp set not null;
+    alter table wallet_transactions add column if not exists amount_cp integer not null default 0;
+    alter table wallet_transactions add column if not exists amount_sp integer not null default 0;
+    alter table wallet_transactions add column if not exists amount_ep integer not null default 0;
+    alter table wallet_transactions add column if not exists amount_pp integer not null default 0;
+  end if;
+end $$;
 
 alter table wallet_transactions enable row level security;
 
@@ -263,10 +291,6 @@ select * from (values
   ('Valemont Runestones', 1, 'Family heirloom from Mother — strange orcish symbols, currently dormant. "Almost strong enough to wield it." Unlocks Rune Carver at level 3.', 10)
 ) as v(name, quantity, notes, sort_order)
 where not exists (select 1 from inventory_items);
-
-insert into wallet_transactions (amount, description)
-select 75, 'Starting funds from House Valemont'
-where not exists (select 1 from wallet_transactions);
 
 insert into quests (title, status, description)
 select 'Stabilize the Smuggling Route', 'active',

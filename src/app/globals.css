@@ -10,6 +10,9 @@
   --gold: #c9a227;
   --gold-strong: #e0b93a;
   --silver: #b8c0c8;
+  --copper: #b0703f;
+  --electrum: #c3b68a;
+  --platinum: #e4e7ea;
   --blood: #8f2323;
   --blood-strong: #b83030;
   --success: #4c7a4c;
@@ -25,6 +28,9 @@
   --color-gold: var(--gold);
   --color-gold-strong: var(--gold-strong);
   --color-silver: var(--silver);
+  --color-copper: var(--copper);
+  --color-electrum: var(--electrum);
+  --color-platinum: var(--platinum);
   --color-blood: var(--blood);
   --color-blood-strong: var(--blood-strong);
   --color-success: var(--success);
