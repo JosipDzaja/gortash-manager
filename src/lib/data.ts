@@ -21,6 +21,9 @@ export type CharacterRow = {
   cha: number;
   skill_proficiencies: string[];
   saving_throw_proficiencies: string[];
+  weapon_armor_proficiencies: string[];
+  tool_proficiencies: string[];
+  languages: string[];
   max_hp: number;
   current_hp: number;
   temp_hp: number;
@@ -74,6 +77,13 @@ export type AbilityAdjustment = {
   label: string;
   kind: AdjustmentKind;
   amount: number;
+  sort_order: number;
+};
+
+export type RacialTrait = {
+  id: string;
+  name: string;
+  description: string;
   sort_order: number;
 };
 
@@ -150,6 +160,14 @@ export async function getAbilityAdjustments(): Promise<AbilityAdjustment[]> {
   const { data, error } = await supabase.from("ability_adjustments").select("*").order("sort_order");
   if (error) throw error;
   return data as AbilityAdjustment[];
+}
+
+export async function getRacialTraits(): Promise<RacialTrait[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("racial_traits").select("*").order("sort_order");
+  if (error) throw error;
+  return data as RacialTrait[];
 }
 
 export async function getQuests(): Promise<Quest[]> {

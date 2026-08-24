@@ -64,6 +64,9 @@ create table if not exists character (
 
   skill_proficiencies text[] not null default array['athletics','intimidation','perception','survival'],
   saving_throw_proficiencies text[] not null default array['str','con'],
+  weapon_armor_proficiencies text[] not null default '{}',
+  tool_proficiencies text[] not null default '{}',
+  languages text[] not null default '{}',
 
   max_hp int not null default 20,
   current_hp int not null default 20,
@@ -102,6 +105,10 @@ create table if not exists character (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table character add column if not exists weapon_armor_proficiencies text[] not null default '{}';
+alter table character add column if not exists tool_proficiencies text[] not null default '{}';
+alter table character add column if not exists languages text[] not null default '{}';
 
 alter table character enable row level security;
 
@@ -215,6 +222,29 @@ alter table ability_adjustments enable row level security;
 
 drop policy if exists "allowlisted full access" on ability_adjustments;
 create policy "allowlisted full access" on ability_adjustments
+  for all to authenticated
+  using (is_allowed_user())
+  with check (is_allowed_user());
+
+-- ============================================================================
+-- Racial traits
+-- ============================================================================
+-- Each row is one named feature granted by the character's race (e.g.
+-- "Darkvision") plus a description. Added and removed freely — distinct from
+-- ability_adjustments, which are numeric contributions to an ability score.
+
+create table if not exists racial_traits (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  description text not null default '',
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+alter table racial_traits enable row level security;
+
+drop policy if exists "allowlisted full access" on racial_traits;
+create policy "allowlisted full access" on racial_traits
   for all to authenticated
   using (is_allowed_user())
   with check (is_allowed_user());

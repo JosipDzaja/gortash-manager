@@ -1,12 +1,17 @@
 import Link from "next/link";
-import { getAbilityAdjustments, getCharacter } from "@/lib/data";
+import { getAbilityAdjustments, getCharacter, getRacialTraits } from "@/lib/data";
 import { Card, CardTitle, SavedTextArea } from "@/components/ui";
 import { AbilityScores, SavingThrows, SkillsList } from "@/components/overview/StatBlock";
+import { ProficienciesCard, LanguagesList, RacialTraitsList } from "@/components/overview/Proficiencies";
 import { passivePerception, proficiencyBonus, formatMod } from "@/lib/dnd/computed";
 import { updateNotes } from "@/lib/actions/character";
 
 export default async function OverviewPage() {
-  const [character, adjustments] = await Promise.all([getCharacter(), getAbilityAdjustments()]);
+  const [character, adjustments, racialTraits] = await Promise.all([
+    getCharacter(),
+    getAbilityAdjustments(),
+    getRacialTraits(),
+  ]);
 
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -53,6 +58,21 @@ export default async function OverviewPage() {
       <Card>
         <CardTitle>Skills</CardTitle>
         <SkillsList character={character} adjustments={adjustments} />
+      </Card>
+
+      <Card>
+        <CardTitle>Proficiencies</CardTitle>
+        <ProficienciesCard character={character} />
+      </Card>
+
+      <Card>
+        <CardTitle>Languages</CardTitle>
+        <LanguagesList character={character} />
+      </Card>
+
+      <Card>
+        <CardTitle>Racial Traits</CardTitle>
+        <RacialTraitsList traits={racialTraits} />
       </Card>
 
       <Card>
