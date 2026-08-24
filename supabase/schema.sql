@@ -161,10 +161,60 @@ create table if not exists inventory_items (
   created_at timestamptz not null default now()
 );
 
+-- Drop the equipped flag from an earlier revision of ability adjustments —
+-- items no longer link to ability adjustments.
+alter table inventory_items drop column if exists equipped;
+
 alter table inventory_items enable row level security;
 
 drop policy if exists "allowlisted full access" on inventory_items;
 create policy "allowlisted full access" on inventory_items
+  for all to authenticated
+  using (is_allowed_user())
+  with check (is_allowed_user());
+
+-- ============================================================================
+-- Ability score adjustments
+-- ============================================================================
+-- Each row is one recorded contribution to an ability score on top of its
+-- (directly editable) base: a description and an amount. `kind` is 'buff'
+-- (adds the amount), 'debuff' (subtracts it), or 'set' (a floor the score
+-- can't fall below while the row exists — matching item text like "your
+-- score becomes 19, unaffected if already 19+"). Added and removed freely;
+-- nothing here is baked into the base score.
+
+create table if not exists ability_adjustments (
+  id uuid primary key default gen_random_uuid(),
+  ability text not null check (ability in ('str','dex','con','int','wis','cha')),
+  label text not null,
+  kind text not null default 'buff' check (kind in ('buff','debuff','set')),
+  amount int not null,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- Migrate the earlier revision: drop source/inventory_item_id and collapse
+-- the old add/set kind into buff/debuff/set.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_name = 'ability_adjustments' and column_name = 'source'
+  ) then
+    alter table ability_adjustments drop constraint if exists ability_adjustments_kind_check;
+    alter table ability_adjustments alter column kind set default 'buff';
+    update ability_adjustments set kind = 'buff' where kind = 'add';
+    alter table ability_adjustments add constraint ability_adjustments_kind_check
+      check (kind in ('buff','debuff','set'));
+    alter table ability_adjustments drop column source;
+    alter table ability_adjustments drop column if exists inventory_item_id;
+  end if;
+end $$;
+
+alter table ability_adjustments enable row level security;
+
+drop policy if exists "allowlisted full access" on ability_adjustments;
+create policy "allowlisted full access" on ability_adjustments
   for all to authenticated
   using (is_allowed_user())
   with check (is_allowed_user());
@@ -291,6 +341,13 @@ select * from (values
   ('Valemont Runestones', 1, 'Family heirloom from Mother — strange orcish symbols, currently dormant. "Almost strong enough to wield it." Unlocks Rune Carver at level 3.', 10)
 ) as v(name, quantity, notes, sort_order)
 where not exists (select 1 from inventory_items);
+
+insert into ability_adjustments (ability, label, kind, amount, sort_order)
+select * from (values
+  ('str', 'Half-Orc', 'buff', 2, 0),
+  ('con', 'Half-Orc', 'buff', 1, 1)
+) as v(ability, label, kind, amount, sort_order)
+where not exists (select 1 from ability_adjustments);
 
 insert into quests (title, status, description)
 select 'Stabilize the Smuggling Route', 'active',

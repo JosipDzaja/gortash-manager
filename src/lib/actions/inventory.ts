@@ -13,7 +13,7 @@ export async function addInventoryItem(formData: FormData) {
     name,
     quantity: Number(formData.get("quantity") ?? 1) || 1,
     notes: String(formData.get("notes") ?? "").trim(),
-    sort_order: Date.now(),
+    sort_order: Math.floor(Date.now() / 1000),
   });
   if (error) throw error;
   revalidatePath("/", "layout");

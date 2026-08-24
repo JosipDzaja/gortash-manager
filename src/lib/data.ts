@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
+import type { AbilityKey, AdjustmentKind } from "@/lib/dnd/types";
 
 export type CharacterRow = {
   id: number;
@@ -64,6 +65,15 @@ export type InventoryItem = {
   name: string;
   quantity: number;
   notes: string;
+  sort_order: number;
+};
+
+export type AbilityAdjustment = {
+  id: string;
+  ability: AbilityKey;
+  label: string;
+  kind: AdjustmentKind;
+  amount: number;
   sort_order: number;
 };
 
@@ -132,6 +142,14 @@ export async function getWalletTransactions(): Promise<WalletTransaction[]> {
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data as WalletTransaction[];
+}
+
+export async function getAbilityAdjustments(): Promise<AbilityAdjustment[]> {
+  await requireUser();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("ability_adjustments").select("*").order("sort_order");
+  if (error) throw error;
+  return data as AbilityAdjustment[];
 }
 
 export async function getQuests(): Promise<Quest[]> {

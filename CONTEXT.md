@@ -23,3 +23,23 @@ _Avoid_: deposit, gain
 **Expense**:
 A Transaction whose Currency amounts decrease the Wallet.
 _Avoid_: withdrawal, spend, purchase
+
+**Ability Score**:
+One of a character's six core stats (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma). Has a Base Score and a Total.
+_Avoid_: stat, attribute
+
+**Base Score**:
+An Ability Score's directly-editable stored value, independent of any Score Adjustment.
+_Avoid_: rolled score, starting score, total
+
+**Total**:
+The Base Score plus every Score Adjustment for that ability. What Ability Modifier is derived from.
+_Avoid_: effective score, current score, base score
+
+**Score Adjustment**:
+A freeform contribution to an Ability Score's Total — a description plus an amount, either added (Buff), subtracted (Debuff), or set as a floor the Total can't fall below (Set to). Covers anything from a feat to a potion to a curse. Added and removed freely; never alters the Base Score.
+_Avoid_: modifier (reserved for Ability Modifier), bonus
+
+**Ability Modifier**:
+The +/-N derived from an Ability Score's Total (floor((total-10)/2)), used in checks, saves, and attacks. Not a Score Adjustment.
+_Avoid_: modifier (alone — always qualify as Ability Modifier or Score Adjustment)

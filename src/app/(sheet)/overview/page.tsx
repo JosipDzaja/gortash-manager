@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { getCharacter } from "@/lib/data";
+import { getAbilityAdjustments, getCharacter } from "@/lib/data";
 import { Card, CardTitle, SavedTextArea } from "@/components/ui";
 import { AbilityScores, SavingThrows, SkillsList } from "@/components/overview/StatBlock";
 import { passivePerception, proficiencyBonus, formatMod } from "@/lib/dnd/computed";
 import { updateNotes } from "@/lib/actions/character";
 
 export default async function OverviewPage() {
-  const character = await getCharacter();
+  const [character, adjustments] = await Promise.all([getCharacter(), getAbilityAdjustments()]);
 
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -36,23 +36,23 @@ export default async function OverviewPage() {
           <QuickStat label="AC" value={String(character.armor_class)} />
           <QuickStat label="Speed" value={`${character.speed} ft`} />
           <QuickStat label="HP" value={`${character.current_hp}/${character.max_hp}`} />
-          <QuickStat label="Passive Perc." value={String(passivePerception(character))} />
+          <QuickStat label="Passive Perc." value={String(passivePerception(character, adjustments))} />
         </div>
       </Card>
 
       <Card>
         <CardTitle>Ability Scores</CardTitle>
-        <AbilityScores character={character} />
+        <AbilityScores character={character} adjustments={adjustments} />
       </Card>
 
       <Card>
         <CardTitle>Saving Throws</CardTitle>
-        <SavingThrows character={character} />
+        <SavingThrows character={character} adjustments={adjustments} />
       </Card>
 
       <Card>
         <CardTitle>Skills</CardTitle>
-        <SkillsList character={character} />
+        <SkillsList character={character} adjustments={adjustments} />
       </Card>
 
       <Card>

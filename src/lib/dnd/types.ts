@@ -36,6 +36,14 @@ export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2);
 }
 
+export type AdjustmentKind = "buff" | "debuff" | "set";
+
+export const KIND_LABELS: Record<AdjustmentKind, string> = {
+  buff: "Buff",
+  debuff: "Debuff",
+  set: "Set to",
+};
+
 export function proficiencyBonusForLevel(level: number): number {
   if (level >= 17) return 6;
   if (level >= 13) return 5;

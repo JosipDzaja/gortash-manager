@@ -1,4 +1,4 @@
-import { getAttacks, getCharacter } from "@/lib/data";
+import { getAbilityAdjustments, getAttacks, getCharacter } from "@/lib/data";
 import { Card, CardTitle } from "@/components/ui";
 import { EditableNumber } from "@/components/EditableNumber";
 import {
@@ -20,7 +20,11 @@ import {
 import { initiative, formatMod } from "@/lib/dnd/computed";
 
 export default async function CombatPage() {
-  const [character, attacks] = await Promise.all([getCharacter(), getAttacks()]);
+  const [character, attacks, adjustments] = await Promise.all([
+    getCharacter(),
+    getAttacks(),
+    getAbilityAdjustments(),
+  ]);
 
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -36,7 +40,7 @@ export default async function CombatPage() {
             label="Initiative misc."
             value={character.initiative_misc}
             onSave={updateInitiativeMisc}
-            hint={`total ${formatMod(initiative(character))}`}
+            hint={`total ${formatMod(initiative(character, adjustments))}`}
           />
           <Stat label="Speed (ft)" value={character.speed} onSave={updateSpeed} />
         </div>

@@ -4,13 +4,20 @@ import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardTitle } from "@/components/ui";
 import { applyLevelUp, type LevelUpChoice } from "@/lib/actions/levelUp";
-import { ABILITY_KEYS, ABILITY_LABELS, SKILLS, abilityModifier, type AbilityKey } from "@/lib/dnd/types";
+import { ABILITY_KEYS, ABILITY_LABELS, SKILLS, type AbilityKey } from "@/lib/dnd/types";
+import { abilityMod } from "@/lib/dnd/computed";
 import { FEATS_2014 } from "@/lib/dnd/feats";
 import { ASI_LEVELS, featuresUnlockedAtLevel } from "@/lib/dnd/fighter";
 import { RUNE_KNIGHT_FEATURES, knownRuneCountForLevel } from "@/lib/dnd/runeKnight";
-import type { CharacterRow } from "@/lib/data";
+import type { AbilityAdjustment, CharacterRow } from "@/lib/data";
 
-export function LevelUpWizard({ character }: { character: CharacterRow }) {
+export function LevelUpWizard({
+  character,
+  adjustments,
+}: {
+  character: CharacterRow;
+  adjustments: AbilityAdjustment[];
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const newLevel = character.level + 1;
@@ -24,7 +31,7 @@ export function LevelUpWizard({ character }: { character: CharacterRow }) {
   const [featAbility, setFeatAbility] = useState<AbilityKey>("str");
   const [featSkills, setFeatSkills] = useState<string[]>([]);
 
-  const conMod = abilityModifier(character.con);
+  const conMod = abilityMod(character, "con", adjustments);
   const hpGain = Math.max(1, hpRolled + conMod);
   const isAsiLevel = ASI_LEVELS.includes(newLevel);
 

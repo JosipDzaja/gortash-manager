@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
-import { getCharacter } from "@/lib/data";
-import { abilityModifier, proficiencyBonusForLevel, type AbilityKey } from "@/lib/dnd/types";
+import { getAbilityAdjustments, getCharacter } from "@/lib/data";
+import { proficiencyBonusForLevel, type AbilityKey } from "@/lib/dnd/types";
+import { abilityMod } from "@/lib/dnd/computed";
 import { actionSurgeMaxForLevel, indomitableMaxForLevel } from "@/lib/dnd/fighter";
 import { getFeat } from "@/lib/dnd/feats";
 
@@ -15,6 +16,7 @@ export type LevelUpChoice =
 export async function applyLevelUp(input: { hpRolled: number; choice?: LevelUpChoice }) {
   await requireUser();
   const character = await getCharacter();
+  const adjustments = await getAbilityAdjustments();
   const newLevel = character.level + 1;
   if (newLevel > 20) throw new Error("Already at max level (20).");
 
@@ -23,29 +25,34 @@ export async function applyLevelUp(input: { hpRolled: number; choice?: LevelUpCh
 
   patch.level = newLevel;
 
-  const conMod = abilityModifier(character.con);
+  const conMod = abilityMod(character, "con", adjustments);
   const hpGain = Math.max(1, input.hpRolled + conMod);
   patch.max_hp = character.max_hp + hpGain;
   patch.current_hp = character.current_hp + hpGain;
   patch.hit_dice_total = character.hit_dice_total + 1;
   patch.hit_dice_current = character.hit_dice_current + 1;
 
-  const abilityPatch: Record<AbilityKey, number> = {
-    str: character.str,
-    dex: character.dex,
-    con: character.con,
-    int: character.int,
-    wis: character.wis,
-    cha: character.cha,
-  };
-
   const feats = [...character.feats];
   const asiHistory = [...character.asi_history];
   let skillProficiencies = character.skill_proficiencies;
+  const newAdjustments: {
+    ability: AbilityKey;
+    label: string;
+    kind: "buff";
+    amount: number;
+    sort_order: number;
+  }[] = [];
 
   if (input.choice?.type === "asi") {
     for (const [key, amount] of Object.entries(input.choice.increases) as [AbilityKey, number][]) {
-      abilityPatch[key] = Math.min(20, abilityPatch[key] + (amount ?? 0));
+      if (!amount) continue;
+      newAdjustments.push({
+        ability: key,
+        label: `Level ${newLevel} ASI`,
+        kind: "buff",
+        amount,
+        sort_order: Math.floor(Date.now() / 1000) + newAdjustments.length,
+      });
     }
     const detail = Object.entries(input.choice.increases)
       .map(([k, v]) => `+${v} ${k.toUpperCase()}`)
@@ -64,7 +71,14 @@ export async function applyLevelUp(input: { hpRolled: number; choice?: LevelUpCh
 
       if (feat.autoEffects?.abilityIncrease && input.choice.abilityChoice) {
         const key = input.choice.abilityChoice;
-        abilityPatch[key] = Math.min(20, abilityPatch[key] + feat.autoEffects.abilityIncrease.amount);
+        const amount = feat.autoEffects.abilityIncrease.amount;
+        newAdjustments.push({
+          ability: key,
+          label: feat.name,
+          kind: "buff",
+          amount,
+          sort_order: Math.floor(Date.now() / 1000),
+        });
       }
       if (input.choice.skillChoices?.length) {
         skillProficiencies = Array.from(new Set([...skillProficiencies, ...input.choice.skillChoices]));
@@ -77,7 +91,6 @@ export async function applyLevelUp(input: { hpRolled: number; choice?: LevelUpCh
     }
   }
 
-  Object.assign(patch, abilityPatch);
   patch.feats = feats;
   patch.asi_history = asiHistory;
   patch.skill_proficiencies = skillProficiencies;
@@ -93,5 +106,11 @@ export async function applyLevelUp(input: { hpRolled: number; choice?: LevelUpCh
 
   const { error } = await supabase.from("character").update(patch).eq("id", 1);
   if (error) throw error;
+
+  if (newAdjustments.length) {
+    const { error: adjustmentsError } = await supabase.from("ability_adjustments").insert(newAdjustments);
+    if (adjustmentsError) throw adjustmentsError;
+  }
+
   revalidatePath("/", "layout");
 }
